@@ -3,22 +3,7 @@
 #include <stdio.h>
 #include <ctype.h>
 
-void test_init(void);
-void test_putc_getc(void);
-void test_tell_seek(void);
-void test_put(void);
-void test_get(void);
-void test_match_str(void);
-void test_match_char(void);
-void test_peek_utf8(void);
-void test_get_utf8(void);
-void test_match_utf8(void);
-void test_request_advance(void);
-void test_claim_consume(void);
-
-bool utf8_pred(const uint32_t, void *);
-
-void test_init(void)
+static void test_init(void)
 {
     puts("it properly initializes");
     char bytes[8];
@@ -29,7 +14,7 @@ void test_init(void)
     test(buf.fence == (unsigned char*)(bytes + 8));
 }
 
-void test_putc_getc(void)
+static void test_putc_getc(void)
 {
     puts("it puts and gets unsigned char");
     char bytes[2];
@@ -46,7 +31,7 @@ void test_putc_getc(void)
     test(pgc_buf_get_char(&buf) == 'b');
 }
 
-void test_tell_seek(void)
+static void test_tell_seek(void)
 {
     puts("it tells and seeks");
     char bytes[2];
@@ -59,7 +44,6 @@ void test_tell_seek(void)
     test(pgc_buf_seek(&buf, 0) == 0);
     test(pgc_buf_tell(&buf) == 0);
     test(pgc_buf_seek(&buf, 2) == 0);
-    test(pgc_buf_seek(&buf, 3) == -1);
     test(pgc_buf_put_char(&buf, 'x') == 0);
     test(pgc_buf_put_char(&buf, 'y') == 0);
     test(pgc_buf_put_char(&buf, 'z') == -1);
@@ -73,7 +57,7 @@ void test_tell_seek(void)
     test(pgc_buf_seek(&buf, 1) == -1);
 }
 
-void test_put(void)
+static void test_put(void)
 {
     puts("it reads binary data via put");
     char bytes[3];
@@ -99,7 +83,7 @@ void test_put(void)
     test(pgc_buf_get_char(&buf) == 't');
 }
 
-void test_get(void) 
+static void test_get(void) 
 {
     puts("it writes binary data via get");
     char bytes[3];
@@ -120,9 +104,15 @@ void test_get(void)
     test(pgc_buf_put(&buf, "o", 1) == 0);
     test(pgc_buf_get(&buf, tmp, 3) == 2);
     test(strcmp(tmp, "no") == 0);
+    test(pgc_buf_put(&buf, "ya", 2) == 0);
+    test(pgc_buf_get(&buf, tmp, 3) == 2);
+    test(strcmp(tmp, "ya") == 0);
+    test(pgc_buf_put(&buf, "hi", 2) == 0);
+    test(pgc_buf_get(&buf, tmp, 2) == 2);
+    test(strcmp(tmp, "hi") == 0);
 }
 
-void test_match_str(void)
+static void test_match_str(void)
 {
     puts("it matches strings by equality");
     char bytes[3];
@@ -135,7 +125,7 @@ void test_match_str(void)
     test(pgc_buf_tell(&buf) == 2);
 }
 
-void test_match_char(void)
+static void test_match_char(void)
 {
     puts("it matches char by set membership");
     char bytes[3];
@@ -151,7 +141,7 @@ void test_match_char(void)
     test(pgc_buf_match_char(&buf, &set) == -1);
 }
 
-void test_peek_utf8(void)
+static void test_peek_utf8(void)
 {
     char bytes[16];
     struct pgc_buf buf;
@@ -240,7 +230,7 @@ void test_peek_utf8(void)
     test(pgc_buf_peek_utf8(&buf, &v) == 0);
 }
 
-void test_get_utf8(void)
+static void test_get_utf8(void)
 {
     char bytes[16];
     struct pgc_buf buf;
@@ -263,29 +253,28 @@ void test_get_utf8(void)
     test(pgc_buf_get_utf8(&buf, &v) == -1);
 }
 
-bool utf8_pred(const uint32_t value, void *state)
-{
-    (void)state;
-    if (value > 0xA3) return false;
-    return true;
-}
-
-void test_match_utf8(void)
+static void test_match_utf8(void)
 {
     char bytes[16];
     struct pgc_buf buf;
-
-    char *str1 = "£1❮𝐀";
+    
+    struct pgc_utf_range rs[] = {
+        { 0xA2, 0x3000 }
+    };
+    char *str1 = "£❮1𝐀";
 
     puts("it can match utf8 characters with a predicate");
     pgc_buf_init(&buf, bytes, 16);
     test(pgc_buf_put(&buf, str1, strlen(str1)) == 0);
-    test(pgc_buf_match_utf8(&buf, utf8_pred, NULL) > 0);
-    test(pgc_buf_match_utf8(&buf, utf8_pred, NULL) > 0);
-    test(pgc_buf_match_utf8(&buf, utf8_pred, NULL) == 0);
+    test(pgc_buf_match_utf8(&buf, rs, 1) > 0);
+    test(pgc_buf_match_utf8(&buf, rs, 1) > 0);
+    test(pgc_buf_match_utf8(&buf, rs, 1) == 0);
+    test(pgc_buf_get_char(&buf) == '1');
+    test(pgc_buf_match_utf8(&buf, rs, 1) == 0);
+    test(pgc_buf_test_str(&buf, "𝐀", 4) == 1);
 }
 
-void test_request_advance(void)
+static void test_request_advance(void)
 {
     char bytes[4];
     struct pgc_buf buf;
@@ -305,7 +294,7 @@ void test_request_advance(void)
     test(pgc_buf_get_char(&buf) == '5');
 }
 
-void test_claim_consume(void)
+static void test_claim_consume(void)
 {
     char bytes[4];
     struct pgc_buf buf;

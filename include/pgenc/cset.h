@@ -20,7 +20,7 @@ static inline void pgc_cset_zero(struct pgc_cset *set)
     }
 }
 
-/** Is elem in set? */
+/** Returns 1 if elem is in set, otherwise 0. */
 static inline bool pgc_cset_in(const struct pgc_cset *set, const uint8_t elem) 
 {
     return (set->words[elem >> 6] & (1ULL << (elem & 63))) != 0;

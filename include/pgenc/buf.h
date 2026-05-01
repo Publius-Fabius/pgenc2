@@ -31,14 +31,12 @@ static inline void pgc_buf_init(
 
 static inline size_t pgc_buf_capacity(const struct pgc_buf *b) 
 {
-    assert(b != NULL);
     assert(b->base <= b->fence);
     return (size_t)(b->fence - b->base);
 }
 
 static inline size_t pgc_buf_available(const struct pgc_buf *b)
 {
-    assert(b != NULL);
     assert(b->base <= b->offset);
     assert(b->end <= b->fence);
     const size_t tail = (size_t)(b->fence - b->end);
@@ -49,7 +47,6 @@ static inline size_t pgc_buf_available(const struct pgc_buf *b)
 /** Reserve 'n' bytes at end of the buffer. */
 static inline int pgc_buf_reserve(struct pgc_buf *b, const size_t n) 
 {
-    assert(b != NULL);
     assert(b->base <= b->offset);
     assert(b->offset <= b->end);
     assert(b->end <= b->fence);
@@ -78,14 +75,12 @@ static inline int pgc_buf_put_char(struct pgc_buf *b, unsigned char c)
 
 static inline int pgc_buf_peek_char(const struct pgc_buf *b) 
 {
-    assert(b != NULL);
     if (b->offset >= b->end) return -1;
     return (int)*b->offset;
 }
 
 static inline int pgc_buf_get_char(struct pgc_buf *b)
 {
-    assert(b != NULL);
     if (b->offset >= b->end) return -1;
     return (int)*b->offset++;
 }
@@ -93,26 +88,22 @@ static inline int pgc_buf_get_char(struct pgc_buf *b)
 /** Get the buffer's current position */
 static inline uint64_t pgc_buf_tell(const struct pgc_buf *b) 
 {
-    assert(b != NULL);
     assert(b->base <= b->offset);
     return b->absolute + (uint64_t)(b->offset - b->base);
 }
 
-/** Seek to buffer position. */
+/** Seek to buffer position, 0 on OK, -1 on consumed, UB when past end. */
 static inline int pgc_buf_seek(struct pgc_buf *b, const uint64_t p) 
 {
-    assert(b != NULL);
     if (b->absolute > p) return -1;
-    unsigned char *new_offset = b->base + (size_t)(p - b->absolute);
-    if (new_offset > b->end) return -1;
-    b->offset = new_offset;
+    b->offset = b->base + (size_t)(p - b->absolute);
+    assert(b->offset <= b->end);
     return 0;
 }
 
 /** Write n bytes of m to the buffer, returns 0 on success, -1 on OOB. */
 static inline int pgc_buf_put(struct pgc_buf *b, const void *m, const size_t n)
 {
-    assert(m != NULL);
     if (pgc_buf_reserve(b, n) != 0) return -1;
     memcpy(b->end, m, n);
     b->end += n;
@@ -122,7 +113,6 @@ static inline int pgc_buf_put(struct pgc_buf *b, const void *m, const size_t n)
 /** Get up to n bytes, store them in m, returns total bytes copied. */
 static inline size_t pgc_buf_get(struct pgc_buf *b, void *m, const size_t n)
 {
-    assert(b != NULL && m != NULL);
     assert(b->offset <= b->end);
     const size_t active = (size_t)(b->end - b->offset);
     const size_t min = n <= active ? n : active; 
@@ -137,7 +127,6 @@ static inline int pgc_buf_test_str(
     const void *m, 
     const size_t n)
 {
-    assert(b != NULL && m != NULL);
     assert(b->offset <= b->end);
     if ((size_t)(b->end - b->offset) < n) return -1;
     if (memcmp(b->offset, m, n) == 0) return 1;
@@ -160,10 +149,8 @@ static inline int pgc_buf_test_char(
     const struct pgc_buf *b, 
     const struct pgc_cset *s) 
 {
-    assert(b != NULL && s != NULL);
     if (b->offset >= b->end) return -1;
-    if (pgc_cset_in(s, *b->offset)) return 1;
-    return 0;
+    return pgc_cset_in(s, *b->offset);
 }
 
 /** Same as pgc_buf_test_char, but consumes the character. */ 
@@ -175,6 +162,11 @@ static inline int pgc_buf_match_char(
     if (res == 1) ++b->offset;
     return res;
 }
+
+/* 
+ * The decode_utf8 section is copy-pasted from Bjoern's website.
+ * It has been released under the MIT License.
+ */
 
 // Copyright (c) 2008-2010 Bjoern Hoehrmann <bjoern@hoehrmann.de>
 // See http://bjoern.hoehrmann.de/utf-8/decoder/dfa/ for details.
@@ -218,12 +210,13 @@ static inline uint32_t decode_utf8(
     return *state;
 }
 
-/* End decode_utf8 section.  Thanks Bjoern! */
+/* 
+ * End decode_utf8 section. 
+ */
 
 /** Peek UTF8 value, returns bytes read, -1 on OOB, 0 on bad UTF8. */
 static inline int pgc_buf_peek_utf8(const struct pgc_buf *b, uint32_t *v)
 {
-    assert(b != NULL && v != NULL);
     uint32_t utf_state = UTF8_ACCEPT;
     for (int i = 0; i < 4; ++i) {
         if (b->offset + i >= b->end) return -1;
@@ -246,61 +239,65 @@ static inline int pgc_buf_get_utf8(struct pgc_buf *b, uint32_t *v)
     return res;
 }
 
-/** Check UTF8 value, bytes checked on success, -1 on OOB, 0 on mismatch. */
+/** Range of UTF8 values. */
+struct pgc_utf_range {
+    uint32_t start;
+    uint32_t stop;
+};
+
+/** Check UTF8 symbol, bytes checked on success, -1 on OOB, 0 on mismatch. */
 static inline int pgc_buf_test_utf8(
-    struct pgc_buf *b,
-    bool (*pred)(const uint32_t, void*),
-    void *state)
+    const struct pgc_buf *b,
+    const struct pgc_utf_range *rs, 
+    const size_t nrs)
 {
-    uint32_t v;
-    const int res = pgc_buf_peek_utf8(b, &v);
-    if (res > 0) {
-        if (pred(v, state)) return res;
-        else return 0;
-    } 
-    return res;
+    uint32_t code_p;
+    const int res = pgc_buf_peek_utf8(b, &code_p);
+    if (res <= 0) return res;
+    for (size_t i = 0; i < nrs; ++i) {
+        if ((code_p - rs[i].start) <= (rs[i].stop - rs[i].start)) 
+            return res;    
+    }
+    return 0;
 }
 
 /** Same as pgc_buf_test_utf8, but consumes the bytes. */
 static inline int pgc_buf_match_utf8(
     struct pgc_buf *b,
-    bool (*pred)(const uint32_t, void*),
-    void *state)
+    const struct pgc_utf_range *rs,
+    const size_t nrs)
 {
-    const int res = pgc_buf_test_utf8(b, pred, state);
+    const int res = pgc_buf_test_utf8(b, rs, nrs);
     if (res > 0) b->offset += res;
     return res;
 }
 
-/** Request nb bytes at the end of the buffer */
-static inline void* pgc_buf_request(struct pgc_buf *b, const size_t nb)
+/** Request len bytes at the end of the buffer, NULL if not available. */
+static inline void* pgc_buf_request(struct pgc_buf *b, const size_t len)
 {
-    if (pgc_buf_reserve(b, nb) == -1) return NULL;
+    if (pgc_buf_reserve(b, len) == -1) return NULL;
     return b->end;
 }
 
-/** Advance the end of buffer nb nbytes. */
-static inline void pgc_buf_advance(struct pgc_buf *b, const size_t nb)
+/** Advance the end of buffer len bytes, advancing past request len is UB. */
+static inline void pgc_buf_advance(struct pgc_buf *b, const size_t len)
 {
-    assert(b != NULL);
-    b->end += nb;
+    b->end += len;
     assert(b->end <= b->fence);
 }
 
-/** Claim nb bytes after the offset */
-static inline void* pgc_buf_claim(const struct pgc_buf *b, const size_t nb)
+/** Claim len bytes after the offset, NULL if not available. */
+static inline void* pgc_buf_claim(const struct pgc_buf *b, const size_t len)
 {
-    assert(b != NULL);
     assert(b->offset <= b->end);
-    if ((size_t)(b->end - b->offset) < nb) return NULL;
+    if ((size_t)(b->end - b->offset) < len) return NULL;
     return b->offset;
 }
 
-/** Consume nb bytes after the offset. */
-static inline void pgc_buf_consume(struct pgc_buf *b, const size_t nb)
+/** Consume len bytes after the offset, consuming past claim len is UB. */
+static inline void pgc_buf_consume(struct pgc_buf *b, const size_t len)
 {
-    assert(b != NULL);
-    b->offset += nb;
+    b->offset += len;
     assert(b->offset <= b->end);
 }
 

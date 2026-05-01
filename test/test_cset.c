@@ -4,15 +4,7 @@
 #include "test.h"
 #include <ctype.h>
 
-void test_set_in(void);
-void test_set_unset(void);
-void test_from(void);
-void test_union(void);
-void test_diff(void);
-void test_isect(void);
-void test_not(void);
-
-void test_set_in(void)
+static void test_set_in(void)
 {
     puts("it can set an element from 0-255");
     for (unsigned int x = 0; x < 256; ++x) {
@@ -23,7 +15,7 @@ void test_set_in(void)
     }
 }
 
-void test_set_unset(void) 
+static void test_set_unset(void) 
 {
     puts("it can unset an element from 0-255");
     for (unsigned int c = 0; c < 256; ++c) {
@@ -39,7 +31,7 @@ void test_set_unset(void)
     }
 }
 
-void test_from(void)
+static void test_from(void)
 {
     puts("it builds correctly from a ctype.h function");
     struct pgc_cset set;
@@ -53,7 +45,7 @@ void test_from(void)
     }
 }
 
-void test_union(void)
+static void test_union(void)
 {
     puts("it can compute the union of two ctype.h functions");
     struct pgc_cset setA;
@@ -69,7 +61,7 @@ void test_union(void)
     }
 }
 
-void test_diff(void)
+static void test_diff(void)
 {
     puts("it can compute the difference of two ctype.h functions");
     struct pgc_cset setA;
@@ -85,7 +77,7 @@ void test_diff(void)
     }
 }
 
-void test_isect(void)
+static void test_isect(void)
 {
     puts("it can compute the intersection of two ctype.h functions");
     struct pgc_cset setA;
@@ -101,7 +93,7 @@ void test_isect(void)
     }
 }
 
-void test_not(void)
+static void test_not(void)
 {
     puts("it can compute the complement of a ctype.h function");
     struct pgc_cset setA;
