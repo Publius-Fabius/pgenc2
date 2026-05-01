@@ -6,6 +6,7 @@
 
 #define test(EXPR) \
     if(!(EXPR)) { \
+        fflush(stdout); \
         fprintf(stderr, \
             "%s:%i: %s: test failed\n", \
             __FILE__, \

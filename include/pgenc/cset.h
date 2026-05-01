@@ -4,7 +4,6 @@
 #include <stdalign.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <assert.h>
 
 typedef int (*pgc_cset_pred_t)(int);
 
@@ -13,19 +12,18 @@ struct pgc_cset {
     alignas(32) uint64_t words[4];    
 };
 
-/** Is elem in set? */
-static inline bool pgc_cset_in(const struct pgc_cset *set, const uint8_t elem) 
-{
-    const uint64_t bit = 1ULL << (elem & 63);
-    return (set->words[elem >> 6] & bit) != 0;
-}
-
 /** Zero out the set. */
 static inline void pgc_cset_zero(struct pgc_cset *set)
 {
     for (int x = 0; x < 4; ++x) {
         set->words[x] = 0ULL;
     }
+}
+
+/** Is elem in set? */
+static inline bool pgc_cset_in(const struct pgc_cset *set, const uint8_t elem) 
+{
+    return (set->words[elem >> 6] & (1ULL << (elem & 63))) != 0;
 }
 
 /** Set bit. */
@@ -84,7 +82,7 @@ static inline void pgc_cset_diff(
     }
 }
 
-/** Compute set complement (NOT). */
+/** Compute set complement. */
 static inline void pgc_cset_not(
     struct pgc_cset *dest, 
     const struct pgc_cset *src)

@@ -129,4 +129,5 @@ int main(int argc, char **args)
     test_diff();
     test_isect();
     test_not();
+    puts("all cset tests passed");
 }

@@ -16,13 +16,12 @@ else
 	CFLAGS += -g -O0 -DDEBUG
 endif 
 
-CFLAGS += -I include 
+CFLAGS += -I include -I test
 
-all: bin/test_cset 
+all: bin/test_cset bin/test_buf
 
-test: all test_cset 
+test: all test_cset test_buf
 	 
-
 bin:
 	mkdir bin
 
@@ -34,8 +33,13 @@ clean:
 	rm -rf bin || true 
 
 bin/test_cset: test/test_cset.c include/pgenc/cset.h bin
-	$(CC) $(CFLAGS) -I test -o $@ $<
+	$(CC) $(CFLAGS) -o $@ $<
 test_cset: bin/test_cset
+	valgrind -q --error-exitcode=1 --leak-check=full $^ 
+
+bin/test_buf: test/test_buf.c include/pgenc/buf.h bin
+	$(CC) $(CFLAGS) -o $@ $<
+test_buf: bin/test_buf
 	valgrind -q --error-exitcode=1 --leak-check=full $^ 
 
 optimize: 
