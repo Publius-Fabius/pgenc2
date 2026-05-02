@@ -245,7 +245,10 @@ struct pgc_utf_range {
     uint32_t stop;
 };
 
-/** Check UTF8 symbol, bytes checked on success, -1 on OOB, 0 on mismatch. */
+/** 
+ * Check UTF8 symbol, bytes checked on success, -1 on OOB, 0 on mismatch. 
+ * Try aligning range array on 16/32/64byte boundary.
+ */
 static inline int pgc_buf_test_utf8(
     const struct pgc_buf *b,
     const struct pgc_utf_range *rs, 

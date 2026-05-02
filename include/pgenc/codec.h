@@ -5,15 +5,16 @@
 #include <stddef.h>
 #include <assert.h>
 #include <string.h>
+#include <stdalign.h>
 
 /** Map 7bit ASCII symbols to numeric values. */
 struct pgc_decoder {
-    int8_t values[128];
+    alignas(64) int8_t values[128];
 };
 
 /** Map numeric values to 7bit ASCII symbols. */
 struct pgc_encoder {
-    int8_t symbols[128];
+    alignas(64) int8_t symbols[128];
 };
 
 /** Decode a numeric value. */
@@ -31,7 +32,7 @@ static inline void pgc_decode(
     }
 }
 
-/** Encode numeric value, -1 on buf overflow, */
+/** Encode numeric value, returns chars writen, -1 on buf overflow, */
 static inline int pgc_encode(
     const uint64_t value,
     const size_t base,
@@ -42,7 +43,7 @@ static inline int pgc_encode(
     char tmp[72];
     assert(base <= 128);
     uint64_t reduced = value;
-    for(int n = 0; n < 72; ++n) {
+    for (int n = 0; n < 72; ++n) {
         if (len <= (size_t)n) return -1;
         const int index = 71 - n;
         tmp[index] = table->symbols[reduced % base];
