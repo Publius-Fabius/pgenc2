@@ -1,7 +1,7 @@
 
+#include "pgenc/err.h"
 #include "pgenc/cset.h"
 #include <stdio.h>
-#include "test.h"
 #include <ctype.h>
 
 static void test_set_in(void)
@@ -11,7 +11,7 @@ static void test_set_in(void)
         struct pgc_cset set; 
         pgc_cset_zero(&set);
         pgc_cset_set(&set, (uint8_t)x);
-        test(pgc_cset_in(&set, (uint8_t)x));
+        pgc_test(pgc_cset_in(&set, (uint8_t)x));
     }
 }
 
@@ -22,11 +22,11 @@ static void test_set_unset(void)
         struct pgc_cset set;
         pgc_cset_zero(&set);
         pgc_cset_set(&set, (uint8_t)c);
-        test(pgc_cset_in(&set, (uint8_t)c));
+        pgc_test(pgc_cset_in(&set, (uint8_t)c));
         pgc_cset_unset(&set, (uint8_t)c);
-        test(!pgc_cset_in(&set, (uint8_t)c));
+        pgc_test(!pgc_cset_in(&set, (uint8_t)c));
         for (unsigned int d = 0; d < 256; ++d) {
-            test(!pgc_cset_in(&set, (uint8_t)d));
+            pgc_test(!pgc_cset_in(&set, (uint8_t)d));
         }
     }
 }
@@ -38,9 +38,9 @@ static void test_from(void)
     pgc_cset_from(&set, isdigit);
     for (unsigned int c = 0; c < 256; ++c) {
         if ('0' <= c && c <= '9') {
-            test(pgc_cset_in(&set, (uint8_t)c));
+            pgc_test(pgc_cset_in(&set, (uint8_t)c));
         } else {
-            test(!pgc_cset_in(&set, (uint8_t)c));
+            pgc_test(!pgc_cset_in(&set, (uint8_t)c));
         }
     }
 }
@@ -57,7 +57,7 @@ static void test_union(void)
     pgc_cset_union(&setC, &setA, &setB);
     pgc_cset_from(&setD, isalnum);
     for (int x = 0; x < 4; ++x) {
-        test(setC.words[x] == setD.words[x]);
+        pgc_test(setC.words[x] == setD.words[x]);
     }
 }
 
@@ -73,7 +73,7 @@ static void test_diff(void)
     pgc_cset_diff(&setC, &setA, &setB);
     pgc_cset_from(&setD, isdigit);
     for (int x = 0; x < 4; ++x) {
-        test(setC.words[x] == setD.words[x]);
+        pgc_test(setC.words[x] == setD.words[x]);
     }
 }
 
@@ -89,7 +89,7 @@ static void test_isect(void)
     pgc_cset_isect(&setC, &setA, &setB);
     pgc_cset_from(&setD, isdigit);
     for (int x = 0; x < 4; ++x) {
-        test(setC.words[x] == setD.words[x]);
+        pgc_test(setC.words[x] == setD.words[x]);
     }
 }
 
@@ -102,9 +102,9 @@ static void test_not(void)
     pgc_cset_not(&setB, &setA);
     for (unsigned int x = 0; x < 256; ++x) {
         if('0' <= x && x <= '9') {
-            test(!pgc_cset_in(&setB, (uint8_t)x));
+            pgc_test(!pgc_cset_in(&setB, (uint8_t)x));
         } else {
-            test(pgc_cset_in(&setB, (uint8_t)x));
+            pgc_test(pgc_cset_in(&setB, (uint8_t)x));
         }
     }
 }

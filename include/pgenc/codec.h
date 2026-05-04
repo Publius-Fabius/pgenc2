@@ -1,11 +1,14 @@
 #ifndef PGENC_CODEC_H
 #define PGENC_CODEC_H
 
+#include "pgenc/err.h"
 #include <stdint.h>
 #include <stddef.h>
 #include <assert.h>
 #include <string.h>
 #include <stdalign.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 /** Map 7bit ASCII symbols to numeric values. */
 struct pgc_decoder {
@@ -32,30 +35,30 @@ static inline void pgc_decode(
     }
 }
 
-/** Encode numeric value, returns chars writen, -1 on buf overflow, */
+/** Encode numeric value.  Returns: chars writen | PGC_BOFLO | PGC_UNRCH. */
 static inline int pgc_encode(
     const uint64_t value,
     const size_t base,
     const struct pgc_encoder *table,
-    void *buf,
+    void* buf,
     const size_t len) 
 {
     char tmp[72];
     assert(base <= 128);
     uint64_t reduced = value;
     for (int n = 0; n < 72; ++n) {
-        if (len <= (size_t)n) return -1;
+        if (len <= (size_t)n) return PGC_BOFLO;
         const int index = 71 - n;
         tmp[index] = table->symbols[reduced % base];
         reduced /= base;
         if (reduced == 0) {
             const int tmp_len = n + 1;
-            memcpy(buf, tmp + index, (size_t)tmp_len);
+            (void)memcpy(buf, tmp + index, (size_t)tmp_len);
             return tmp_len;
         }
     }
-    assert(0);
-    return -1;
+    pgc_panic("unreachable state"); 
+    return PGC_UNRCH;
 }
 
 static const struct pgc_decoder pgc_decimal_decoder = { {

@@ -15,9 +15,7 @@ struct pgc_cset {
 /** Zero out the set. */
 static inline void pgc_cset_zero(struct pgc_cset *set)
 {
-    for (int x = 0; x < 4; ++x) {
-        set->words[x] = 0ULL;
-    }
+    for (int x = 0; x < 4; ++x) set->words[x] = 0ULL;
 }
 
 /** Returns 1 if elem is in set, otherwise 0. */
@@ -43,9 +41,7 @@ static inline void pgc_cset_from(struct pgc_cset *dest, pgc_cset_pred_t pred)
 {
     pgc_cset_zero(dest);
     for (unsigned int c = 0; c < 256; ++c) { 
-        if (pred((int)c)) {
-            pgc_cset_set(dest, (uint8_t)c);
-        }
+        if (pred((int)c)) pgc_cset_set(dest, (uint8_t)c);
     }
 }
 
@@ -55,9 +51,8 @@ static inline void pgc_cset_isect(
     const struct pgc_cset *fst, 
     const struct pgc_cset *snd)
 {
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 4; ++i) 
         dest->words[i] = fst->words[i] & snd->words[i];
-    }
 }
 
 /** Compute set union. */
@@ -66,9 +61,8 @@ static inline void pgc_cset_union(
     const struct pgc_cset *fst, 
     const struct pgc_cset *snd)
 {
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 4; ++i) 
         dest->words[i] = fst->words[i] | snd->words[i];
-    }
 }
 
 /** Compute set difference. */
@@ -77,9 +71,8 @@ static inline void pgc_cset_diff(
     const struct pgc_cset *fst, 
     const struct pgc_cset *snd)
 {
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 4; ++i) 
         dest->words[i] = fst->words[i] & ~snd->words[i];
-    }
 }
 
 /** Compute set complement. */
@@ -87,9 +80,8 @@ static inline void pgc_cset_not(
     struct pgc_cset *dest, 
     const struct pgc_cset *src)
 {
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 4; ++i) 
         dest->words[i] = ~src->words[i];
-    }
 }
 
 #endif
