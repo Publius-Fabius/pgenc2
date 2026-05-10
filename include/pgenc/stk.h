@@ -6,11 +6,11 @@
 #include <assert.h>
 
 /** Byte Stack */
-struct pgc_stk {
+typedef struct pgc_stk {
     unsigned char *base;
     unsigned char *top;
     unsigned char *fence;
-};
+} pgc_stk_t;
 
 /** Initialize the stack. */
 static inline void pgc_stk_init(
@@ -40,8 +40,7 @@ static inline void *pgc_stk_peek(const struct pgc_stk *stk, const size_t len)
     return stk->top + len;
 }
 
-/** Pop len bytes from stack.  Accessing a memory region after it has been 
- * popped is undefined behavior.  Returns: PGC_SUFLO | PGC_OK. */
+/** Pop len bytes from stack.  Returns: PGC_SUFLO | PGC_OK. */
 static inline int pgc_stk_pop(struct pgc_stk *stk, const size_t len)
 {
     assert(stk->top <= stk->fence);

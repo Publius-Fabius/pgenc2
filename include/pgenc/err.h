@@ -5,16 +5,17 @@
 #include <stdlib.h>
 
 enum pgc_err {
-    PGC_OK                      = 0,            // all ok 
+    PGC_OK                      = 0,            // all ok
     PGC_ERRNO                   = -1,           // errno error
-    PGC_ISEEK                   = -10,          // invalid seek 
+    PGC_ISEEK                   = -10,          // invalid seek
     PGC_BOFLO                   = -11,          // buffer overflow
     PGC_BUFLO                   = -12,          // buffer underflow
     PGC_SOFLO                   = -13,          // stack overflow
     PGC_SUFLO                   = -14,          // stack underflow
     PGC_NOMAT                   = -15,          // no match found
-    PGC_IUTF8                   = -16,          // invalid utf8 
-    PGC_UNRCH                   = -17           // unreachable state
+    PGC_IUTF8                   = -16,          // invalid utf8
+    PGC_NOMEM                   = -17,          // out of memory
+    PGC_UNRCH                   = -18           // unreachable state
 };
 
 static inline void pgc_panic_(

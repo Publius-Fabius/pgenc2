@@ -10,13 +10,13 @@
 #include <stdio.h>
 
 /** [ base, .., offset, .., end, .., fence ] */
-struct pgc_buf {
+typedef struct pgc_buf {
     unsigned char *base;
     unsigned char *offset;
     unsigned char *end;
     unsigned char *fence;
     uint64_t absolute;
-};
+} pgc_buf_t;
 
 static inline void pgc_buf_init(
     struct pgc_buf *b, 

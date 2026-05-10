@@ -11,14 +11,14 @@
 #include <stdlib.h>
 
 /** Map 7bit ASCII symbols to numeric values. */
-struct pgc_decoder {
+typedef struct pgc_decoder {
     alignas(64) int8_t values[128];
-};
+} pgc_decoder_t;
 
 /** Map numeric values to 7bit ASCII symbols. */
-struct pgc_encoder {
+typedef struct pgc_encoder {
     alignas(64) int8_t symbols[128];
-};
+} pgc_encoder_t;
 
 /** Decode a numeric value. */
 static inline void pgc_decode(

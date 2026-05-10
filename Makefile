@@ -18,13 +18,19 @@ endif
 
 CFLAGS += -I include -I test
 
-all: bin/test_cset bin/test_buf bin/test_codec bin/test_stk
+all: \
+	bin/test_cset \
+	bin/test_buf \
+	bin/test_codec \
+	bin/test_stk \
+	bin/test_par
 
 test: \
 	test_cset \
 	test_buf \
 	test_codec \
-	test_stk
+	test_stk \
+	test_par
 	 
 bin:
 	mkdir bin
@@ -54,6 +60,11 @@ test_codec: bin/test_codec
 bin/test_stk: test/test_stk.c include/pgenc/stk.h bin
 	$(CC) $(CFLAGS) -o $@ $<
 test_stk: bin/test_stk
+	valgrind -q --error-exitcode=1 --leak-check=full $^ 
+
+bin/test_par: test/test_par.c include/pgenc/par.h bin
+	$(CC) $(CFLAGS) -o $@ $<
+test_par: bin/test_par
 	valgrind -q --error-exitcode=1 --leak-check=full $^ 
 
 optimize: 
