@@ -6,25 +6,24 @@
 #include "pgenc/stk.h"
 #include "pgenc/codec.h"
 
-/** Parser Type Discriminator */
+/** Parser Combinator Type */
 enum pgc_par_tag {
 
-    /* Pure Parsers */
+    /* Pure Combinators */
 
-    PGC_PAR_CMP,                        /** Raw Comparison (memcmp) Parser */
-    PGC_PAR_UTF8,                       /** UTF8 "In Range" Parser */
     PGC_PAR_BYTE,                       /** Byte Equality Parser */
     PGC_PAR_SET,                        /** U8set Membership Parser */
+    PGC_PAR_CMP,                        /** Raw Comparison (memcmp) Parser */
+    PGC_PAR_UTF8,                       /** UTF8 "In Range" Parser */
     PGC_PAR_AND,                        /** Product Parser */
     PGC_PAR_OR,                         /** Choice Parser */
     PGC_PAR_REP,                        /** Repetition Parser */
 
-    /* Stateful Parsers */
+    /* Stateful Combinators */
     
-    PGC_PAR_STR,                        /** Copy & Attach String */
+    PGC_PAR_STR,                        /** Copy & Attach NULL Delimited Str */
     PGC_PAR_NUM,                        /** Decode & Attach Number */
-    PGC_PAR_NST,                        /** Push List & Nest Result */
-    PGC_PAR_UTF,                        /** Decode & Attach UTF32 */
+    PGC_PAR_NEST,                       /** Push List & Nest Result */
     PGC_PAR_UTAG                        /** Set PSM->utag */
 };
 
@@ -76,7 +75,7 @@ typedef struct pgc_par {
 #define PGC_PAR_UTF8(RANGES, NRANGES) { \
     .tag = PGC_PAR_UTF8, \
     .u.utf8.ranges = RANGES, \
-    .u.utf8.nranges = NRANGES, } \
+    .u.utf8.num_ranges = NRANGES, } \
 
 #define PGC_PAR_SET(SET) { \
     .tag = PGC_PAR_SET, \
@@ -142,7 +141,7 @@ static int pgc_par_push_sframe(const pgc_par_t *par, pgc_stk_t *stk)
         pgc_always(pgc_stk_pop(stk, sizeof(*sframe)));
         return PGC_SOFLO;
     }
-    return PGC_SOFLO; 
+    return PGC_OK; 
 }
 
 static void pgc_par_pop_sframe(pgc_stk_t *stk)
@@ -160,7 +159,7 @@ static int pgc_par_push_oframe(const pgc_par_t *par, pgc_stk_t *stk)
         pgc_always(pgc_stk_pop(stk, sizeof(*oframe)));
         return PGC_SOFLO;
     }
-    return PGC_SOFLO; 
+    return PGC_OK; 
 }
 
 static void pgc_par_pop_oframe(pgc_stk_t *stk)
@@ -178,7 +177,7 @@ static int pgc_par_push_lframe(const pgc_par_t *par, pgc_stk_t *stk)
         pgc_always(pgc_stk_pop(stk, sizeof(*lframe)));
         return PGC_SOFLO;
     }
-    return PGC_SOFLO; 
+    return PGC_OK; 
 }
 
 static void pgc_par_pop_lframe(pgc_stk_t *stk)
@@ -204,8 +203,7 @@ static int pgc_par_push(const pgc_par_t *par, pgc_stk_t *stk)
         case PGC_PAR_NUM:
         case PGC_PAR_STR:
             return pgc_par_push_oframe(par, stk);
-        case PGC_PAR_MRG:
-        case PGC_PAR_NST:
+        case PGC_PAR_NEST:
             return pgc_par_push_lframe(par, stk);
         default: 
             pgc_panic("unreachable state"); 
@@ -213,47 +211,43 @@ static int pgc_par_push(const pgc_par_t *par, pgc_stk_t *stk)
     }
 }
 
-static inline int pgc_par_run_byte(
+static int pgc_par_run_byte(
     const pgc_par_t *par, 
     pgc_buf_t *buf,
     pgc_stk_t *stk)
 {
-    const int res = pgc_buf_match_char(buf, par->u.byte);
     (void)pgc_par_pop_ptr(stk);
-    return res;
+    return pgc_buf_match_char(buf, par->u.byte);
 }
 
-static inline int pgc_par_run_set(
+static int pgc_par_run_set(
     const pgc_par_t *par, 
     pgc_buf_t *buf,
     pgc_stk_t *stk)
 {
-    const int res =  pgc_buf_match_set(buf, par->u.set);
     (void)pgc_par_pop_ptr(stk);
-    return res;
+    return pgc_buf_match_set(buf, par->u.set);
 }
 
-static inline int pgc_par_run_utf8(
+static int pgc_par_run_utf8(
     const pgc_par_t *par, 
     pgc_buf_t *buf,
     pgc_stk_t *stk)
 {
-    const int res = pgc_buf_match_utf8(
+    (void)pgc_par_pop_ptr(stk);
+    return pgc_buf_match_utf8(
         buf, 
         par->u.utf8.ranges, 
         par->u.utf8.num_ranges);
-    (void)pgc_par_pop_ptr(stk);
-    return res;
 }
 
-static inline int pgc_par_run_cmp(
+static int pgc_par_run_cmp(
     const pgc_par_t *par, 
     pgc_buf_t *buf,
     pgc_stk_t *stk)
 {
-    const int res = pgc_buf_match_str(buf, par->u.str.val, par->u.str.len);
     (void)pgc_par_pop_ptr(stk);
-    return res;
+    return pgc_buf_match_str(buf, par->u.str.val, par->u.str.len);
 }
 
 static int pgc_par_run_utag(
@@ -261,8 +255,8 @@ static int pgc_par_run_utag(
     pgc_stk_t *stk,
     pgc_psm_t *psm)
 {
-    psm->utag = par->u.utag;
     (void)pgc_par_pop_ptr(stk);
+    psm->utag = par->u.utag;
     return PGC_OK;
 }
 
@@ -407,158 +401,130 @@ static int pgc_par_run_num(
     pgc_buf_t *buf,
     pgc_stk_t *stk,
     pgc_psm_t *psm,
-    const int status)
+    int status)
 {
-    int res = -1;
-    pgc_par_oframe_t *frame = pgc_stk_peek(stk, sizeof(void*));
-    assert(frame != NULL); 
+    pgc_par_oframe_t *frame = pgc_stk_peek(stk, sizeof(const pgc_par_t*));
+    assert(frame != NULL);
     switch (frame->step) {
         case 0:
-            if ((res = pgc_par_push(par->u.par, stk)) != PGC_OK) {
-                (void)pgc_par_pop_oframe(stk);
-                return res;
-            }
+            if ((status = pgc_par_push(par->u.par, stk)) != PGC_OK)
+                goto CLEANUP;
             frame->step = 1;
             frame->offset = pgc_buf_tell(buf);
             return PGC_OK;
         case 1:
-            if (status != PGC_OK) {
-                (void)pgc_par_pop_oframe(stk);
-                return status;
-            } else break;
+            if (status != PGC_OK) goto CLEANUP;
+            break;
         default:
-            pgc_panic("unreachable state"); 
-            return PGC_UNRCH; 
+            pgc_panic("unreachable state");
+            return PGC_UNRCH;
     }
     pgc_par_decrec_t *rec = par->u.num.rec;
     const uint64_t end = pgc_buf_tell(buf);
     assert(frame->offset <= end);
     const uint64_t len = end - frame->offset;
-    res = pgc_buf_seek(buf, frame->offset);
+    if ((status = pgc_buf_seek(buf, frame->offset)) != PGC_OK)
+        goto CLEANUP;
     (void)pgc_par_pop_oframe(stk);
-    if (res != PGC_OK) return res;
     pgc_ast_lst_t *lst = pgc_alloc(psm->alloc, sizeof(pgc_ast_lst_t));
     if (lst == NULL) return PGC_NOMEM;
     void* addr = pgc_buf_claim(buf, len);
     assert(addr != NULL);
     lst->nxt = NULL; 
-    (void)pgc_ast_init_u64(&lst->val, 0, 0);
+    (void)pgc_ast_init_u64(&lst->val, psm->utag, 0);
     (void)pgc_decode(addr, len, rec->base, rec->dec, &lst->val.u.u64);
+    (void)pgc_buf_consume(buf, len);
     (void)pgc_psm_append(psm, lst);
     return PGC_OK;
+CLEANUP:
+    (void)pgc_par_pop_oframe(stk);
+    return status;
 }
 
-static int pgc_par_run_mrg(
+static int pgc_par_run_nest(
     const pgc_par_t *par,
     pgc_stk_t *stk,
     pgc_psm_t *psm,
-    const int status)
+    int status)
 {
-    pgc_par_lframe_t *frame = pgc_stk_peek(stk, sizeof(void*));
+    pgc_par_lframe_t *frame = pgc_stk_peek(stk, sizeof(const pgc_par_t*));
     assert(frame != NULL); 
     switch (frame->step) {
         case 0:
-            if (pgc_par_push(par->u.par, stk) != PGC_OK) {
-                (void)pgc_par_pop_frame(stk);
-                return PGC_SOFLO;
-            }
+            if ((status = pgc_par_push(par->u.par, stk)) != PGC_OK) 
+                goto CLEANUP;
             frame->step = 1;
             frame->first = psm->first;
             frame->last = psm->last;
             return PGC_OK;
         case 1:
-            (void)pgc_par_pop_frame(stk);
-            if (status != PGC_OK) return status;
-            break;
-        default:
-            pgc_panic("unreachable state"); 
-            return PGC_UNRCH; 
-    }
-    (void)pgc_psm_concat_front(psm, frame->first, frame->last); 
-    return PGC_OK;
-}
-
-static int pgc_par_run_nst(
-    const pgc_par_t *par,
-    pgc_stk_t *stk,
-    pgc_psm_t *psm,
-    const int status)
-{
-    pgc_par_lframe_t *frame = pgc_stk_peek(stk, sizeof(void*));
-    assert(frame != NULL); 
-    switch (frame->step) {
-        case 0:
-            if (pgc_par_push(par->u.par, stk) != PGC_OK) {
-                (void)pgc_par_pop_frame(stk);
-                return PGC_SOFLO;
-            }
-            frame->step = 1;
-            frame->first = psm->first;
-            frame->last = psm->last;
-            return PGC_OK;
-        case 1:
-            (void)pgc_par_pop_frame(stk);
-            if (status != PGC_OK) return status;
+            if (status != PGC_OK) goto CLEANUP;
             break;
         default:
             pgc_panic("unreachable state"); 
             return PGC_UNRCH; 
     }
     pgc_ast_lst_t *lst = pgc_alloc(psm->alloc, sizeof(*lst));
-    if (lst == NULL) return PGC_NOMEM;
+    if (lst == NULL) {
+        status = PGC_NOMEM;
+        goto CLEANUP;
+    }
     lst->nxt = NULL;
-    (void)pgc_ast_init_lst(&lst->val, 0, frame->first);
+    (void)pgc_ast_init_lst(&lst->val, psm->utag, frame->first);
     (void)pgc_psm_append(psm, lst);
-    return PGC_OK;
-}
-
-
-
-/** Peek the current parser or NULL. */
-static inline const struct pgc_par* pgc_par_peek(const struct pgc_stk *stk)
-{
-    const struct pgc_par **ptr = pgc_stk_peek(stk, 0);
-    return ptr == NULL ? NULL : *ptr;
+CLEANUP:
+    (void)pgc_par_pop_lframe(stk);
+    return status;
 }
 
 /**
  * Run a parser by taking a buffer, a stack, and a state.  Returns a negative 
- * error code on failure, otherwise PGC_ERR_OK.
+ * error code on failure, otherwise PGC_OK.
  */
 static int pgc_par_run(
-    const struct pgc_par *par, 
-    struct pgc_buf *buf,
-    struct pgc_stk *stk,
+    const pgc_par_t *par, 
+    pgc_buf_t *buf,
+    pgc_stk_t *stk,
     pgc_psm_t *psm)
 {
-    int status;
-    const struct pgc_par* base = pgc_par_peek(stk);
+    int status = -1;
+    const pgc_par_t** ptr = NULL;
+    const pgc_par_t** base = pgc_stk_top(stk); 
     pgc_try(pgc_par_push(par, stk));
-    while ((par = pgc_par_peek(stk)) && par < base) {
-        switch (par->tag) {
+    while ((ptr = pgc_stk_peek(stk, 0)) && ptr < base) {
+        switch ((*ptr)->tag) {
             case PGC_PAR_BYTE:
-                status = pgc_par_run_byte(par, buf, stk);
+                status = pgc_par_run_byte(*ptr, buf, stk);
                 break;
             case PGC_PAR_UTF8:
-                status = pgc_par_run_utf8(par, buf, stk);
+                status = pgc_par_run_utf8(*ptr, buf, stk);
                 break;
             case PGC_PAR_SET:
-                status = pgc_par_run_set(par, buf, stk);
+                status = pgc_par_run_set(*ptr, buf, stk);
                 break;
             case PGC_PAR_CMP:
-                status = pgc_par_run_cmp(par, buf, stk);
+                status = pgc_par_run_cmp(*ptr, buf, stk);
                 break;
             case PGC_PAR_AND:
-                status = pgc_par_run_and(par, stk, status);
+                status = pgc_par_run_and(*ptr, stk, status);
                 break;
             case PGC_PAR_OR:
-                status = pgc_par_run_or(par, buf, stk, status);
+                status = pgc_par_run_or(*ptr, buf, stk, status);
                 break;
             case PGC_PAR_REP:
-                status = pgc_par_run_rep(par, buf, stk, status);
+                status = pgc_par_run_rep(*ptr, buf, stk, status);
                 break;
             case PGC_PAR_STR:
-                status = pgc_par_run_str(par, buf, stk, psm, status);
+                status = pgc_par_run_str(*ptr, buf, stk, psm, status);
+                break;
+            case PGC_PAR_NUM:
+                status = pgc_par_run_num(*ptr, buf, stk, psm, status);
+                break;
+            case PGC_PAR_NEST:
+                status = pgc_par_run_nest(*ptr, stk, psm, status);
+                break;
+            case PGC_PAR_UTAG:
+                status = pgc_par_run_utag(*ptr, stk, psm);
                 break;
             default:
                 pgc_panic("unreachable state");
@@ -569,16 +535,16 @@ static int pgc_par_run(
 }
 
 static inline intptr_t pgc_par_runs(
-    const struct pgc_par *par,
+    const pgc_par_t *par,
     const char *str,
-    struct pgc_stk *stk,
-    void *st)
+    pgc_stk_t *stk,
+    pgc_psm_t *psm)
 {
     const size_t len = strlen(str);
-    struct pgc_buf buf;
+    pgc_buf_t buf;
     (void)pgc_buf_init(&buf, (void*)str, len);
     (void)pgc_buf_advance(&buf, len);
-    const int res = pgc_par_run(par, &buf, stk, st);
+    const int res = pgc_par_run(par, &buf, stk, psm);
     return res == PGC_OK ? (intptr_t)pgc_buf_tell(&buf) : res;
 }
 

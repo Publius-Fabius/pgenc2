@@ -8,9 +8,9 @@
 typedef int (*pgc_cset_pred_t)(int);
 
 /** Bit Map 256 */
-struct pgc_cset {
+typedef struct pgc_cset {
     alignas(32) uint64_t words[4];    
-};
+} pgc_cset_t;
 
 /** Zero out the set. */
 static inline void pgc_cset_zero(struct pgc_cset *set)

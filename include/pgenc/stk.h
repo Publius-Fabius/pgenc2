@@ -63,4 +63,9 @@ static inline size_t pgc_stk_size(const struct pgc_stk *stk)
     return (size_t)(stk->fence - stk->top);
 }
 
+static inline void* pgc_stk_top(const struct pgc_stk *stk)
+{
+    return stk->top;
+}
+
 #endif

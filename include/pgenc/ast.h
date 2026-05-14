@@ -30,21 +30,30 @@ typedef struct pgc_ast_lst {
     struct pgc_ast_lst *nxt;                    /** Next node */
 } pgc_ast_lst_t;
 
-void pgc_ast_init_u64(pgc_ast_t *a, const int32_t utag, const uint64_t v)
+static inline void pgc_ast_init_u64(
+    pgc_ast_t *a, 
+    const int32_t utag, 
+    const uint64_t v)
 {
     a->atag = PGC_AST_U64;
     a->utag = utag;
     a->u.u64 = v;
 }
 
-void pgc_ast_init_str(pgc_ast_t *a, const int32_t utag, char* v)
+static inline void pgc_ast_init_str(
+    pgc_ast_t *a, 
+    const int32_t utag, 
+    char* v)
 {
     a->atag = PGC_AST_STR;
     a->utag = utag;
     a->u.str = v;
 } 
 
-void pgc_ast_init_lst(pgc_ast_t *a, const int32_t utag, pgc_ast_lst_t *lst)
+static inline void pgc_ast_init_lst(
+    pgc_ast_t *a, 
+    const int32_t utag, 
+    pgc_ast_lst_t *lst)
 {
     a->atag = PGC_AST_LST;
     a->utag = utag;

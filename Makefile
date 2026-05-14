@@ -23,15 +23,17 @@ all: \
 	bin/test_buf \
 	bin/test_codec \
 	bin/test_stk \
-	bin/test_par
+	bin/test_alloc \
+	bin/test_par \
 
 test: \
 	test_cset \
 	test_buf \
 	test_codec \
 	test_stk \
+	test_alloc \
 	test_par
-	 
+
 bin:
 	mkdir bin
 
@@ -67,5 +69,9 @@ bin/test_par: test/test_par.c include/pgenc/par.h bin
 test_par: bin/test_par
 	valgrind -q --error-exitcode=1 --leak-check=full $^ 
 
+bin/test_alloc: test/test_alloc.c include/pgenc/alloc.h bin
+	$(CC) $(CFLAGS) -o $@ $<
+test_alloc: bin/test_alloc
+	valgrind -q --error-exitcode=1 --leak-check=full $^ 
 optimize: 
 	$(MAKE) OPTIMIZE=1 all

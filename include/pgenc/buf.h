@@ -257,10 +257,10 @@ static inline int pgc_buf_get_utf8(struct pgc_buf *b, uint32_t *v)
 }
 
 /** Range of UTF8 values. */
-struct pgc_utf8_range {
+typedef struct pgc_utf8_range {
     uint32_t start;
     uint32_t stop;
-};
+} pgc_utf8_range_t;
 
 /** 
  * Test UTF8.
