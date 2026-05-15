@@ -29,7 +29,7 @@ enum pgc_par_tag {
 
 typedef struct pgc_par_decrec {
     size_t base;
-    pgc_decoder_t *dec;
+    const pgc_decoder_t *dec;
 } pgc_par_decrec_t;
 
 typedef struct pgc_par {
@@ -100,6 +100,19 @@ typedef struct pgc_par {
 #define PGC_PAR_STR(PAR) { \
     .tag = PGC_PAR_STR, \
     .u.par = PAR }
+
+#define PGC_PAR_NUM(PAR, REC) { \
+    .tag = PGC_PAR_NUM, \
+    .u.num.digs = PAR, \
+    .u.num.rec = REC }
+
+#define PGC_PAR_NEST(PAR) { \
+    .tag = PGC_PAR_NEST, \
+    .u.par = PAR }
+
+#define PGC_PAR_UTAG(UTAG) { \
+    .tag = PGC_PAR_UTAG, \
+    .u.utag = UTAG }
 
 /** And Parser Frame */
 typedef struct pgc_par_sframe {
@@ -448,10 +461,10 @@ static int pgc_par_run_nest(
     int status)
 {
     pgc_par_lframe_t *frame = pgc_stk_peek(stk, sizeof(const pgc_par_t*));
-    assert(frame != NULL); 
+    assert(frame != NULL);
     switch (frame->step) {
         case 0:
-            if ((status = pgc_par_push(par->u.par, stk)) != PGC_OK) 
+            if ((status = pgc_par_push(par->u.par, stk)) != PGC_OK)
                 goto CLEANUP;
             frame->step = 1;
             frame->first = psm->first;
@@ -461,8 +474,8 @@ static int pgc_par_run_nest(
             if (status != PGC_OK) goto CLEANUP;
             break;
         default:
-            pgc_panic("unreachable state"); 
-            return PGC_UNRCH; 
+            pgc_panic("unreachable state");
+            return PGC_UNRCH;
     }
     pgc_ast_lst_t *lst = pgc_alloc(psm->alloc, sizeof(*lst));
     if (lst == NULL) {
@@ -470,7 +483,9 @@ static int pgc_par_run_nest(
         goto CLEANUP;
     }
     lst->nxt = NULL;
-    (void)pgc_ast_init_lst(&lst->val, psm->utag, frame->first);
+    (void)pgc_ast_init_lst(&lst->val, psm->utag, psm->first);
+    psm->first = frame->first;
+    psm->last = frame->last;
     (void)pgc_psm_append(psm, lst);
 CLEANUP:
     (void)pgc_par_pop_lframe(stk);
