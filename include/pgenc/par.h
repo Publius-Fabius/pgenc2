@@ -63,54 +63,54 @@ typedef struct pgc_par {
     } u;
 } pgc_par_t;
 
-#define PGC_PAR_CMP(STR, LEN) { \
+#define pgc_par_cmp(STR, LEN) { \
     .tag = PGC_PAR_CMP, \
     .u.str.val = STR, \
     .u.str.len = LEN }
 
-#define PGC_PAR_BYTE(OCTET) { \
+#define pgc_par_byte(OCTET) { \
     .tag = PGC_PAR_BYTE, \
     .u.byte = OCTET }
 
-#define PGC_PAR_UTF8(RANGES, NRANGES) { \
+#define pgc_par_utf8(RANGES, NRANGES) { \
     .tag = PGC_PAR_UTF8, \
     .u.utf8.ranges = RANGES, \
     .u.utf8.num_ranges = NRANGES, } \
 
-#define PGC_PAR_SET(SET) { \
+#define pgc_par_set(SET) { \
     .tag = PGC_PAR_SET, \
     .u.set = SET }
 
-#define PGC_PAR_AND(ARG1, ARG2) { \
+#define pgc_par_and(ARG1, ARG2) { \
     .tag = PGC_PAR_AND, \
     .u.pair.arg1 = ARG1, \
     .u.pair.arg2 = ARG2 }
 
-#define PGC_PAR_OR(ARG1, ARG2) { \
+#define pgc_par_or(ARG1, ARG2) { \
     .tag = PGC_PAR_OR, \
     .u.pair.arg1 = ARG1, \
     .u.pair.arg2 = ARG2 }
 
-#define PGC_PAR_REP(SUB, MIN, MAX) { \
+#define pgc_par_rep(SUB, MIN, MAX) { \
     .tag = PGC_PAR_REP, \
     .u.rep.sub = SUB, \
     .u.rep.min = MIN, \
     .u.rep.max = MAX }
 
-#define PGC_PAR_STR(PAR) { \
+#define pgc_par_str(PAR) { \
     .tag = PGC_PAR_STR, \
     .u.par = PAR }
 
-#define PGC_PAR_NUM(PAR, REC) { \
+#define pgc_par_num(PAR, REC) { \
     .tag = PGC_PAR_NUM, \
     .u.num.digs = PAR, \
     .u.num.rec = REC }
 
-#define PGC_PAR_NEST(PAR) { \
+#define pgc_par_nest(PAR) { \
     .tag = PGC_PAR_NEST, \
     .u.par = PAR }
 
-#define PGC_PAR_UTAG(UTAG) { \
+#define pgc_par_utag(UTAG) { \
     .tag = PGC_PAR_UTAG, \
     .u.utag = UTAG }
 

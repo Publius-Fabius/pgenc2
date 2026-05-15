@@ -10,7 +10,7 @@ static void test_byte(void)
     pgc_stk_init(&stk, stk_bytes, 128);
 
     (void)puts("it can parse one constant byte");
-    pgc_par_t p = PGC_PAR_BYTE('a');
+    pgc_par_t p = pgc_par_byte('a');
     pgc_test(pgc_par_runs(&p, "a", &stk, NULL) == 1);
 
     (void)puts("it will not parse a byte when there is a bad match");
@@ -32,7 +32,7 @@ static void test_set(void)
 
     pgc_cset_t s;
     (void)pgc_cset_from(&s, isalnum);
-    pgc_par_t p = PGC_PAR_SET(&s);
+    pgc_par_t p = pgc_par_set(&s);
 
     (void)puts("it can parse one byte in a set");
     pgc_test(pgc_par_runs(&p, "a", &stk, NULL) == 1);
@@ -59,7 +59,7 @@ static void test_cmp(void)
 
     pgc_cset_t s;
     (void)pgc_cset_from(&s, isalnum);
-    pgc_par_t p = PGC_PAR_CMP("cat", 3);
+    pgc_par_t p = pgc_par_cmp("cat", 3);
 
     (void)puts("it can parse a constant string");
     pgc_test(pgc_par_runs(&p, "cat", &stk, NULL) == 3);
@@ -82,7 +82,7 @@ static void test_utf8(void)
     pgc_stk_init(&stk, stk_bytes, 128);
 
     pgc_utf8_range_t r = { 880, 1023 };
-    pgc_par_t p = PGC_PAR_UTF8(&r, 1);
+    pgc_par_t p = pgc_par_utf8(&r, 1);
 
     (void)puts("it can parse a UTF8 symbol");
     pgc_test(pgc_par_runs(&p, "Δ", &stk, NULL) == 2);
@@ -104,9 +104,9 @@ static void test_and(void)
     pgc_stk_t stk;
     pgc_stk_init(&stk, stk_bytes, 128);
     
-    pgc_par_t cat = PGC_PAR_CMP("cat", 3);
-    pgc_par_t dog = PGC_PAR_CMP("dog", 3);
-    pgc_par_t p = PGC_PAR_AND(&cat, &dog);
+    pgc_par_t cat = pgc_par_cmp("cat", 3);
+    pgc_par_t dog = pgc_par_cmp("dog", 3);
+    pgc_par_t p = pgc_par_and(&cat, &dog);
     
     (void)puts("it can parse two parsers sequentially");
     pgc_test(pgc_par_runs(&p, "catdog", &stk, NULL) == 6);
@@ -138,9 +138,9 @@ static void test_or(void)
     pgc_stk_t stk;
     pgc_stk_init(&stk, stk_bytes, 128);
     
-    pgc_par_t cat = PGC_PAR_CMP("cat", 3);
-    pgc_par_t hi = PGC_PAR_CMP("hi", 2);
-    pgc_par_t p = PGC_PAR_OR(&cat, &hi);
+    pgc_par_t cat = pgc_par_cmp("cat", 3);
+    pgc_par_t hi = pgc_par_cmp("hi", 2);
+    pgc_par_t p = pgc_par_or(&cat, &hi);
    
     (void)puts("it can parse the first parser in a choice");
     pgc_test(pgc_par_runs(&p, "cat", &stk, NULL) == 3);
@@ -168,8 +168,8 @@ static void test_rep(void)
   
     pgc_cset_t set;
     pgc_cset_from(&set, isalnum);
-    pgc_par_t sub = PGC_PAR_SET(&set);
-    pgc_par_t p = PGC_PAR_REP(&sub, 2, 3);
+    pgc_par_t sub = pgc_par_set(&set);
+    pgc_par_t p = pgc_par_rep(&sub, 2, 3);
   
     (void)puts("it can repeat a parser a minimum number of times");
     pgc_test(pgc_par_runs(&p, "x1%", &stk, NULL) == 2);
@@ -216,11 +216,11 @@ static void test_str(void)
     pgc_stk_t stk;
     pgc_stk_init(&stk, stk_bytes, 128);
 
-    pgc_par_t cat = PGC_PAR_CMP("cat", 3);
-    pgc_par_t ccat = PGC_PAR_STR(&cat);
-    pgc_par_t dog = PGC_PAR_CMP("dog", 3);
-    pgc_par_t cdog = PGC_PAR_STR(&dog);
-    pgc_par_t p = PGC_PAR_AND(&ccat, &cdog);
+    pgc_par_t cat = pgc_par_cmp("cat", 3);
+    pgc_par_t ccat = pgc_par_str(&cat);
+    pgc_par_t dog = pgc_par_cmp("dog", 3);
+    pgc_par_t cdog = pgc_par_str(&dog);
+    pgc_par_t p = pgc_par_and(&ccat, &cdog);
 
     puts("it can capture two strings in a row");
     psm.utag = 1245;
@@ -249,11 +249,11 @@ static void test_num(void)
 
     pgc_par_decrec_t rec = { 10, &pgc_decimal_decoder };
      
-    pgc_par_t num1 = PGC_PAR_CMP("123", 3);
-    pgc_par_t cnum1 = PGC_PAR_NUM(&num1, &rec);
-    pgc_par_t num2 = PGC_PAR_CMP("456", 3);
-    pgc_par_t cnum2 = PGC_PAR_NUM(&num2, &rec);
-    pgc_par_t p = PGC_PAR_AND(&cnum1, &cnum2);
+    pgc_par_t num1 = pgc_par_cmp("123", 3);
+    pgc_par_t cnum1 = pgc_par_num(&num1, &rec);
+    pgc_par_t num2 = pgc_par_cmp("456", 3);
+    pgc_par_t cnum2 = pgc_par_num(&num2, &rec);
+    pgc_par_t p = pgc_par_and(&cnum1, &cnum2);
 
     puts("it can capture two numbers in a row");
     psm.utag = 1245;
@@ -281,12 +281,12 @@ static void test_nest(void)
 
     pgc_par_decrec_t rec = { 10, &pgc_decimal_decoder };
      
-    pgc_par_t num1 = PGC_PAR_CMP("123", 3);
-    pgc_par_t cnum1 = PGC_PAR_NUM(&num1, &rec);
-    pgc_par_t num2 = PGC_PAR_CMP("456", 3);
-    pgc_par_t cnum2 = PGC_PAR_NUM(&num2, &rec);
-    pgc_par_t and = PGC_PAR_AND(&cnum1, &cnum2);
-    pgc_par_t p = PGC_PAR_NEST(&and);
+    pgc_par_t num1 = pgc_par_cmp("123", 3);
+    pgc_par_t cnum1 = pgc_par_num(&num1, &rec);
+    pgc_par_t num2 = pgc_par_cmp("456", 3);
+    pgc_par_t cnum2 = pgc_par_num(&num2, &rec);
+    pgc_par_t and = pgc_par_and(&cnum1, &cnum2);
+    pgc_par_t p = pgc_par_nest(&and);
 
     puts("it can capture a nested expression");
     psm.utag = 1245;
@@ -317,10 +317,10 @@ static void test_utag(void)
 
     pgc_par_decrec_t rec = { 10, &pgc_decimal_decoder };
      
-    pgc_par_t num = PGC_PAR_CMP("123", 3);
-    pgc_par_t cnum = PGC_PAR_NUM(&num, &rec);
-    pgc_par_t tag = PGC_PAR_UTAG(321);
-    pgc_par_t p = PGC_PAR_AND(&tag, &cnum);
+    pgc_par_t num = pgc_par_cmp("123", 3);
+    pgc_par_t cnum = pgc_par_num(&num, &rec);
+    pgc_par_t tag = pgc_par_utag(321);
+    pgc_par_t p = pgc_par_and(&tag, &cnum);
 
     puts("it can tag a node");
     pgc_test(pgc_par_runs(&p, "123456", &stk, &psm) == 3);
